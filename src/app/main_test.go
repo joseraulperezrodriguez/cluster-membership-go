@@ -6,14 +6,23 @@ import (
 	"cluster-membership-go/src/model"
 	"flag"
 	"os"
+	"strconv"
 	"testing"
 )
 
-var mode, ids, addresses, protocolPorts, serverPorts = createFlags()
+var mode *string
+var ids *config.ArgStringList
+var addresses *config.ArgStringList
+var protocolPorts *config.ArgStringList
+var serverPorts *config.ArgStringList
 
 func TestMain(t *testing.T) {
-	t.Run("args working okay", mainBasicTestOnGoodParameter)
-	t.Run("args with 2 elements working okay", main2ElementTestOnGoodParameter)
+	mode, ids, addresses, protocolPorts, serverPorts = createFlags()
+	t.Run("args basic should work ok", mainBasicTestOnGoodParameter)
+	t.Run("args with 2 elements should work ok", main2ElementTestOnGoodParameter)
+	t.Run("args with empty parameter should fail", basicTestOnBadParameter)
+	t.Run("args with wrong int format should fail", errorOnIntParse)
+
 }
 
 func mainBasicTestOnGoodParameter(t *testing.T) {
@@ -24,13 +33,12 @@ func mainBasicTestOnGoodParameter(t *testing.T) {
 		"--" + config.NodeProtocolPort, "20",
 		"--" + config.NodeServerPort, "21",
 	}
-	//var mode, ids, addresses, protocolPorts, serverPorts = createFlags()
 	flag.Parse()
 
 	conf, configError := config.Validate(*mode, *ids, *addresses, *protocolPorts, *serverPorts)
 
 	if configError != nil {
-		t.Error(&configError)
+		t.Error(&common.TraceableError{ErrorS: "Unexpected error due to the provided test case", RawError: configError})
 	}
 
 	var expectedConfig = config.Configuration{
@@ -38,7 +46,7 @@ func mainBasicTestOnGoodParameter(t *testing.T) {
 		Nodes: []model.Node{{ID: "id1", Address: "ad1", ProtocolPort: 20, ServerPort: 21}},
 	}
 	if conf.Mode != expectedConfig.Mode || !common.EqualsArrays(conf.Nodes, expectedConfig.Nodes) {
-		t.Error(&common.BasicError{ErrorS: "mainTestOnGoodParameter Failed, some values don't match the expected values"})
+		t.Error(&common.BaseError{ErrorS: "mainTestOnGoodParameter Failed, some values don't match the expected values"})
 		t.Logf("Expected config %v distinct from result config %v\n", expectedConfig, conf)
 	}
 }
@@ -51,13 +59,12 @@ func main2ElementTestOnGoodParameter(t *testing.T) {
 		"--" + config.NodeProtocolPort, "20,21",
 		"--" + config.NodeServerPort, "22,23",
 	}
-	//var mode, ids, addresses, protocolPorts, serverPorts = createFlags()
 	flag.Parse()
 
 	conf, configError := config.Validate(*mode, *ids, *addresses, *protocolPorts, *serverPorts)
 
 	if configError != nil {
-		t.Error(&configError)
+		t.Error(&common.TraceableError{ErrorS: "Unexpected error due to the provided test case", RawError: configError})
 	}
 
 	var expectedConfig = config.Configuration{
@@ -68,7 +75,51 @@ func main2ElementTestOnGoodParameter(t *testing.T) {
 		},
 	}
 	if conf.Mode != expectedConfig.Mode || !common.EqualsArrays(conf.Nodes, expectedConfig.Nodes) {
-		t.Error(&common.BasicError{ErrorS: "main2ElementTestOnGoodParameter Failed, some values don't match the expected values"})
+		t.Error(&common.BaseError{ErrorS: "main2ElementTestOnGoodParameter Failed, some values don't match the expected values"})
 		t.Logf("Expected config %v distinct from result config %v\n", expectedConfig, conf)
+	}
+}
+
+func basicTestOnBadParameter(t *testing.T) {
+	os.Args = []string{"-",
+		"--mode", "RUNNING",
+		"--" + config.NodeID, "id1,id2",
+		"--" + config.NodeAddress, "ad1,ad2",
+		"--" + config.NodeProtocolPort, "20,21",
+		"--" + config.NodeServerPort, "",
+	}
+	flag.Parse()
+
+	_, configError := config.Validate(*mode, *ids, *addresses, *protocolPorts, *serverPorts)
+
+	if configError == nil {
+		t.Error(&common.BaseError{ErrorS: "Not error detected in bad config"})
+	} else {
+		_, ok := configError.(*common.ArgumentParsingError)
+		if !ok {
+			t.Error(&common.BaseError{ErrorS: "Error detected don't match the expected error type"})
+		}
+	}
+}
+
+func errorOnIntParse(t *testing.T) {
+	os.Args = []string{"-",
+		"--mode", "RUNNING",
+		"--" + config.NodeID, "id1,id2",
+		"--" + config.NodeAddress, "ad1,ad2",
+		"--" + config.NodeProtocolPort, "20,21",
+		"--" + config.NodeServerPort, "22,ii23d",
+	}
+	flag.Parse()
+
+	_, configError := config.Validate(*mode, *ids, *addresses, *protocolPorts, *serverPorts)
+
+	if configError == nil {
+		t.Error(&common.BaseError{ErrorS: "Not error detected in bad config"})
+	} else {
+		_, ok := configError.(*strconv.NumError)
+		if !ok {
+			t.Error(&common.BaseError{ErrorS: "Error detected don't match the expected error type"})
+		}
 	}
 }

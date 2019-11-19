@@ -51,7 +51,7 @@ func (arg *ArgStringList) IsBoolFlag() bool {
 func (arg *ArgStringList) Set(argS string) error {
 	var array = strings.Split(argS, ",")
 	if len(array) == 0 {
-		return &common.BasicError{ErrorS: "Field is not valid, no value provided"}
+		return &common.BaseError{ErrorS: "Field is not valid, no value provided"}
 	}
 	arg.Values = array
 	return nil
@@ -95,7 +95,7 @@ func buildConf(mode string, ids ArgStringList, addresses ArgStringList,
 			return Configuration{}, pError
 		}
 		var sPort, sError = strconv.Atoi(serverPorts.Values[i])
-		if pError != nil {
+		if sError != nil {
 			return Configuration{}, sError
 		}
 		nodes[i] = model.Node{ID: ids.Values[i], Address: addresses.Values[i], ProtocolPort: pPort, ServerPort: sPort}

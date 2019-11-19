@@ -10,12 +10,10 @@ func ArrayToString(array []string, sep string) string {
 	if len(array) == 0 {
 		return ""
 	}
-	println("ArrayToString -> 1")
 	var ans = array[0]
 	for i := 1; i < len(array); i++ {
 		ans += sep + array[i]
 	}
-	println("ArrayToString -> " + ans)
 	return ans
 }
 
