@@ -14,6 +14,9 @@ type Configuration struct {
 	Nodes []model.Node
 }
 
+//NilConfig for return when needed
+var NilConfig = Configuration{}
+
 //NodeID is the command line argument name for seeds node id
 var NodeID = "id"
 
@@ -61,34 +64,41 @@ func (arg *ArgStringList) String() string {
 
 //Validate validates the command line input
 func Validate(mode string, ids ArgStringList, addresses ArgStringList,
-	protocolPorts ArgStringList, serverPorts ArgStringList) error {
-
+	protocolPorts ArgStringList, serverPorts ArgStringList) (Configuration, error) {
 	if mode != strings.ToUpper(runningMode) && mode != strings.ToUpper(testMode) {
-		return &common.ArgumentParsingError{ErrorS: fmt.Sprintf("The 'mode' variable must be either %s or %s", runningMode, testMode)}
+		return Configuration{}, &common.ArgumentParsingError{ErrorS: fmt.Sprintf("The 'mode' variable must be either %s or %s", runningMode, testMode)}
 	}
 	if len(ids.Values) != len(addresses.Values) || len(addresses.Values) != len(protocolPorts.Values) ||
 		len(protocolPorts.Values) != len(serverPorts.Values) {
-		return &common.ArgumentParsingError{ErrorS: fmt.Sprintf("Arguments %s, %s, %s and %s must contains the same number of element", NodeID, NodeAddress, NodeProtocolPort, NodeServerPort)}
+		return NilConfig, &common.ArgumentParsingError{ErrorS: fmt.Sprintf("Arguments %s, %s, %s and %s must contains the same number of element", NodeID, NodeAddress, NodeProtocolPort, NodeServerPort)}
 	}
 	if chk := common.CheckNonEmpty(ids.Values, NodeID); chk != nil {
-		return chk
+		return NilConfig, chk
 	} else if chk := common.CheckNonEmpty(addresses.Values, NodeAddress); chk != nil {
-		return chk
+		return NilConfig, chk
 	} else if chk := common.CheckNonEmpty(protocolPorts.Values, NodeProtocolPort); chk != nil {
-		return chk
-	} else if chk := common.CheckNonEmpty(protocolPorts.Values, NodeProtocolPort); chk != nil {
-		return chk
+		return NilConfig, chk
+	} else if chk := common.CheckNonEmpty(serverPorts.Values, NodeServerPort); chk != nil {
+		return NilConfig, chk
 	} else {
-		return nil
+		return buildConf(mode, ids, addresses, protocolPorts, serverPorts)
 	}
 
 }
 
 func buildConf(mode string, ids ArgStringList, addresses ArgStringList,
-	protocolPorts ArgStringList, serverPorts ArgStringList) Configuration {
+	protocolPorts ArgStringList, serverPorts ArgStringList) (Configuration, error) {
 	var nodes = make([]model.Node, len(ids.Values))
 	for i := 0; i < len(ids.Values); i++ {
-
-		nodes[i] = model.Node{ID: ids.Values[i], Address: addresses.Values[i], ProtocolPort: strconv.Atoi(protocolPorts.Values[i]), ServerPort: strconv.Atoi(serverPorts.Values[i])}
+		var pPort, pError = strconv.Atoi(protocolPorts.Values[i])
+		if pError != nil {
+			return Configuration{}, pError
+		}
+		var sPort, sError = strconv.Atoi(serverPorts.Values[i])
+		if pError != nil {
+			return Configuration{}, sError
+		}
+		nodes[i] = model.Node{ID: ids.Values[i], Address: addresses.Values[i], ProtocolPort: pPort, ServerPort: sPort}
 	}
+	return Configuration{Nodes: nodes, Mode: mode}, nil
 }
