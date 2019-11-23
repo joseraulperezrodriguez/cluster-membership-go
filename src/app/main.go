@@ -6,8 +6,9 @@ import (
 	"fmt"
 )
 
-func createFlags() (mode *string, ids *config.ArgStringList, addresses *config.ArgStringList, protocolPorts *config.ArgStringList, serverPorts *config.ArgStringList) {
+func createFlags() (mode *string, configPath *string, ids *config.ArgStringList, addresses *config.ArgStringList, protocolPorts *config.ArgStringList, serverPorts *config.ArgStringList) {
 	mode = flag.String(config.AppMode, "", "Possible values are: RUNNING or TEST")
+	configPath = flag.String(config.ConfigPath, "", "The path to the config file")
 	ids = &config.ArgStringList{}
 	addresses = &config.ArgStringList{}
 	protocolPorts = &config.ArgStringList{}
@@ -23,15 +24,18 @@ func createFlags() (mode *string, ids *config.ArgStringList, addresses *config.A
 
 func main() {
 
-	var mode, ids, addresses, protocolPorts, serverPorts = createFlags()
+	var mode, configPath, ids, addresses, protocolPorts, serverPorts = createFlags()
 
 	flag.Parse()
 
-	configuration, configError := config.Validate(*mode, *ids, *addresses, *protocolPorts, *serverPorts)
+	configuration, configError := config.Validate(*mode, *configPath, *ids, *addresses, *protocolPorts, *serverPorts)
 	if configError != nil {
 		fmt.Println(fmt.Errorf("Error produced at parsing  configuration parameters \n%s", configError.Error()))
 		return
 	}
 
 	fmt.Printf("Using config: %v\n", configuration)
+
+	//TODO
+
 }

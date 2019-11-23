@@ -4,14 +4,26 @@ import (
 	"cluster-membership-go/src/common"
 	"cluster-membership-go/src/model"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 //Configuration type
 type Configuration struct {
-	Mode  string
-	Nodes []model.Node
+	Mode      string
+	SeedNodes []model.Node
+
+	IterationIntervalMs      int
+	ConnectionTimeoutMs      int
+	ReadIddleIterationFactor int
+	CyclesForWaitKeepAlive   int
+	MaxRumorLogSize          int
+	MaxObjectSize            int
+	ClientThreads            int
+	ServerThreads            int
+
+	CurrentNode model.Node
 }
 
 //NilConfig for return when needed
@@ -33,6 +45,9 @@ var NodeServerPort = "server.port"
 var AppMode = "mode"
 var runningMode = "RUNNING"
 var testMode = "TEST"
+
+//ConfigPath is the path for program configuration file
+var ConfigPath = "config.path"
 
 //ArgListSep is the string used to parse the command line parameters that contains list of elements
 var ArgListSep = ","
@@ -63,10 +78,13 @@ func (arg *ArgStringList) String() string {
 }
 
 //Validate validates the command line input
-func Validate(mode string, ids ArgStringList, addresses ArgStringList,
+func Validate(mode string, configPath string, ids ArgStringList, addresses ArgStringList,
 	protocolPorts ArgStringList, serverPorts ArgStringList) (Configuration, error) {
 	if mode != strings.ToUpper(runningMode) && mode != strings.ToUpper(testMode) {
 		return Configuration{}, &common.ArgumentParsingError{ErrorS: fmt.Sprintf("The 'mode' variable must be either %s or %s", runningMode, testMode)}
+	}
+	if strings.Trim(configPath, " ") == "" {
+		return Configuration{}, &common.ArgumentParsingError{ErrorS: "Empty configPath"}
 	}
 	if len(ids.Values) != len(addresses.Values) || len(addresses.Values) != len(protocolPorts.Values) ||
 		len(protocolPorts.Values) != len(serverPorts.Values) {
@@ -81,24 +99,29 @@ func Validate(mode string, ids ArgStringList, addresses ArgStringList,
 	} else if chk := common.CheckNonEmpty(serverPorts.Values, NodeServerPort); chk != nil {
 		return NilConfig, chk
 	} else {
-		return buildConf(mode, ids, addresses, protocolPorts, serverPorts)
+		return buildConf(mode, configPath, ids, addresses, protocolPorts, serverPorts)
 	}
-
 }
 
-func buildConf(mode string, ids ArgStringList, addresses ArgStringList,
+func buildConf(mode string, configPath string, ids ArgStringList, addresses ArgStringList,
 	protocolPorts ArgStringList, serverPorts ArgStringList) (Configuration, error) {
 	var nodes = make([]model.Node, len(ids.Values))
 	for i := 0; i < len(ids.Values); i++ {
 		var pPort, pError = strconv.Atoi(protocolPorts.Values[i])
 		if pError != nil {
-			return Configuration{}, pError
+			return NilConfig, pError
 		}
 		var sPort, sError = strconv.Atoi(serverPorts.Values[i])
 		if sError != nil {
-			return Configuration{}, sError
+			return NilConfig, sError
 		}
 		nodes[i] = model.Node{ID: ids.Values[i], Address: addresses.Values[i], ProtocolPort: pPort, ServerPort: sPort}
 	}
-	return Configuration{Nodes: nodes, Mode: mode}, nil
+
+	_, absConfigPathErr := filepath.Abs(configPath)
+	if absConfigPathErr != nil {
+		return NilConfig, absConfigPathErr
+	}
+
+	return Configuration{SeedNodes: nodes, Mode: mode}, nil
 }
