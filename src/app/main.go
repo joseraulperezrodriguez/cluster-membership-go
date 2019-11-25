@@ -33,8 +33,10 @@ func main() {
 		fmt.Println(fmt.Errorf("Error produced at parsing  configuration parameters \n%s", configError.Error()))
 		return
 	}
-
-	fmt.Printf("Using config: %v\n", configuration)
+	configurationError := config.AddProgramConfig(&configuration)
+	if configurationError != nil {
+		fmt.Printf("Using config: %v\n", configuration)
+	}
 
 	//TODO
 

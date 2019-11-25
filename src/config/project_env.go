@@ -7,12 +7,15 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/magiconair/properties"
 )
 
 //Configuration type
 type Configuration struct {
-	Mode      string
-	SeedNodes []model.Node
+	Mode       string
+	SeedNodes  []model.Node
+	ConfigPath string
 
 	IterationIntervalMs      int
 	ConnectionTimeoutMs      int
@@ -118,10 +121,45 @@ func buildConf(mode string, configPath string, ids ArgStringList, addresses ArgS
 		nodes[i] = model.Node{ID: ids.Values[i], Address: addresses.Values[i], ProtocolPort: pPort, ServerPort: sPort}
 	}
 
-	_, absConfigPathErr := filepath.Abs(configPath)
+	absConfigPath, absConfigPathErr := filepath.Abs(configPath)
 	if absConfigPathErr != nil {
 		return NilConfig, absConfigPathErr
 	}
+	var config = &Configuration{SeedNodes: nodes, Mode: mode, ConfigPath: absConfigPath}
+	return *config, nil
+}
 
-	return Configuration{SeedNodes: nodes, Mode: mode}, nil
+//AddProgramConfig adds the configuration parameter from the config file
+func AddProgramConfig(config *Configuration) error {
+	prop := properties.MustLoadFile(config.ConfigPath, properties.UTF8)
+
+	config.IterationIntervalMs = prop.GetInt("iteration.interval.ms", 3000)
+	config.ConnectionTimeoutMs = prop.GetInt("connection.timeout.ms", 1000)
+	config.ReadIddleIterationFactor = prop.GetInt("read.iddle.iteration.factor", 3)
+	config.CyclesForWaitKeepAlive = prop.GetInt("cycles.for.wait.keep.alive", 3)
+	config.MaxRumorLogSize = prop.GetInt("max.rumor.log.size", 1000000)
+	config.MaxObjectSize = prop.GetInt("max.object.size", 2147483647)
+	config.ClientThreads = prop.GetInt("client.threads", 3)
+	config.ServerThreads = prop.GetInt("server.threads", 3)
+	config.CurrentNode = model.Node{
+		ID:           strings.Trim(prop.GetString(NodeID, ""), " "),
+		Address:      strings.Trim(prop.GetString(NodeAddress, ""), " "),
+		ProtocolPort: prop.GetInt(NodeProtocolPort, -1),
+		ServerPort:   prop.GetInt(NodeServerPort, -1),
+	}
+
+	if config.CurrentNode.ID == "" {
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty values", NodeID)}
+	}
+	if config.CurrentNode.Address == "" {
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty values", NodeAddress)}
+	}
+	if config.CurrentNode.ProtocolPort < 0 {
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v should be setted", NodeProtocolPort)}
+	}
+	if config.CurrentNode.ServerPort < 0 {
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v should be setted", NodeServerPort)}
+	}
+
+	return nil
 }
