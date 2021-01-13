@@ -1,8 +1,8 @@
 package config
 
 import (
-	"cluster-membership-go/src/common"
-	"cluster-membership-go/src/model"
+	"cluster-membership-go/common"
+	"cluster-membership-go/model"
 	"fmt"
 	"path/filepath"
 	"strconv"

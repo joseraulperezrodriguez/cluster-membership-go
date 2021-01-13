@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cluster-membership-go/src/config"
+	"cluster-membership-go/config"
 	"flag"
 	"fmt"
 )

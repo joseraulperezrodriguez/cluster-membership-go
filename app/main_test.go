@@ -1,9 +1,9 @@
 package main
 
 import (
-	"cluster-membership-go/src/common"
-	"cluster-membership-go/src/config"
-	"cluster-membership-go/src/model"
+	"cluster-membership-go/common"
+	"cluster-membership-go/config"
+	"cluster-membership-go/model"
 	"flag"
 	"os"
 	"strconv"

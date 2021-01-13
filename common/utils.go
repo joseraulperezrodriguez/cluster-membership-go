@@ -1,7 +1,7 @@
 package common
 
 import (
-	"cluster-membership-go/src/model"
+	"cluster-membership-go/model"
 	"fmt"
 )
 
