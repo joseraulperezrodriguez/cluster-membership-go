@@ -24,6 +24,7 @@ func TestMain(t *testing.T) {
 	t.Run("args with empty parameter should fail", basicTestOnBadParameter)
 	t.Run("args with wrong int format should fail", errorOnIntParse)
 	t.Run("args with different list size should fail", errorOnDifferentListSize)
+	t.Run("args basic with resources file for current node should be okay", goodReadingPropertiesFile)
 
 }
 
@@ -31,6 +32,7 @@ func mainBasicTestOnGoodParameter(t *testing.T) {
 	os.Args = []string{"-",
 		"--" + config.AppMode, "RUNNING",
 		"--" + config.ConfigPath, "path/to/file",
+
 		"--" + config.NodeID, "id1",
 		"--" + config.NodeAddress, "ad1",
 		"--" + config.NodeProtocolPort, "20",
@@ -91,7 +93,7 @@ func basicTestOnBadParameter(t *testing.T) {
 		"--" + config.NodeID, "id1,id2",
 		"--" + config.NodeAddress, "ad1,ad2",
 		"--" + config.NodeProtocolPort, "20,21",
-		"--" + config.NodeServerPort, "",
+		"--" + config.NodeServerPort, "2456",
 	}
 	flag.Parse()
 
@@ -133,7 +135,7 @@ func errorOnIntParse(t *testing.T) {
 func errorOnDifferentListSize(t *testing.T) {
 	os.Args = []string{"-",
 		"--" + config.AppMode, "RUNNING",
-		"--" + config.ConfigPath, "/tmp/path",
+		"--" + config.ConfigPath, "path/to/some",
 		"--" + config.NodeID, "id1",
 		"--" + config.NodeAddress, "ad1,ad2",
 		"--" + config.NodeProtocolPort, "20,21",
@@ -151,4 +153,72 @@ func errorOnDifferentListSize(t *testing.T) {
 			t.Error(&common.BaseError{ErrorS: "Error detected don't match the expected error type"})
 		}
 	}
+}
+
+func goodReadingPropertiesFile(t *testing.T) {
+	os.Args = []string{"-",
+		"--" + config.AppMode, "RUNNING",
+		"--" + config.ConfigPath, "../resources/app.properties",
+
+		"--" + config.NodeID, "id1",
+		"--" + config.NodeAddress, "ad1",
+		"--" + config.NodeProtocolPort, "20",
+		"--" + config.NodeServerPort, "21",
+	}
+	flag.Parse()
+
+	conf, configError := config.Validate(*mode, *configPath, *ids, *addresses, *protocolPorts, *serverPorts)
+
+	if configError != nil {
+		t.Error(&common.TraceableError{ErrorS: "Unexpected error due to the provided test case", RawError: configError})
+	}
+
+	var expectedConfig = config.Configuration{
+		Mode:      "RUNNING",
+		SeedNodes: []model.Node{{ID: "id1", Address: "ad1", ProtocolPort: 20, ServerPort: 21}},
+	}
+	if conf.Mode != expectedConfig.Mode || !common.EqualsArrays(conf.SeedNodes, expectedConfig.SeedNodes) {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, some values don't match the expected values"})
+		t.Logf("Expected config %v distinct from result config %v\n", expectedConfig, conf)
+	}
+
+	configError = config.AddProgramConfig(&conf)
+
+	if conf.IterationIntervalMs != 3000 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, IterationIntervalMs not match"})
+	}
+
+	if conf.ConnectionTimeoutMs != 1000 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, ConnectionTimeoutMs not match"})
+	}
+
+	if conf.ReadIddleIterationFactor != 3 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, ReadIddleIterationFactor not match"})
+	}
+
+	if conf.CyclesForWaitKeepAlive != 3 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, CyclesForWaitKeepAlive not match"})
+	}
+
+	if conf.MaxRumorLogSize != 1000000 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, MaxRumorLogSize not match"})
+	}
+
+	if conf.MaxObjectSize != 2147483647 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, MaxObjectSize not match"})
+	}
+
+	if conf.ClientThreads != 3 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, ClientThreads not match"})
+	}
+
+	if conf.ServerThreads != 3 {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, ServerThreads not match"})
+	}
+
+	var expected = model.Node{ID: "A", Address: "localhost", ProtocolPort: 7001, ServerPort: 6001}
+	if expected != conf.CurrentNode {
+		t.Error(&common.BaseError{ErrorS: "goodReadingPropertiesFile Failed, CurrentNode don't match"})
+	}
+
 }

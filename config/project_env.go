@@ -149,10 +149,10 @@ func AddProgramConfig(config *Configuration) error {
 	}
 
 	if config.CurrentNode.ID == "" {
-		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty values", NodeID)}
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty value", NodeID)}
 	}
 	if config.CurrentNode.Address == "" {
-		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty values", NodeAddress)}
+		return &common.BaseError{ErrorS: fmt.Sprintf("%v can't have empty value", NodeAddress)}
 	}
 	if config.CurrentNode.ProtocolPort < 0 {
 		return &common.BaseError{ErrorS: fmt.Sprintf("%v should be setted", NodeProtocolPort)}

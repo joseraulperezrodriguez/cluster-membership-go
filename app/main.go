@@ -13,12 +13,10 @@ func createFlags() (mode *string, configPath *string, ids *config.ArgStringList,
 	addresses = &config.ArgStringList{}
 	protocolPorts = &config.ArgStringList{}
 	serverPorts = &config.ArgStringList{}
-
 	flag.Var(ids, config.NodeID, "The node id list, separated by comma")
 	flag.Var(addresses, config.NodeAddress, "The node address list, separated by comma")
 	flag.Var(protocolPorts, config.NodeProtocolPort, "The node protocol port list, separated by comma")
 	flag.Var(serverPorts, config.NodeServerPort, "The node server port list, separated by comma")
-
 	return
 }
 
@@ -28,16 +26,16 @@ func main() {
 
 	flag.Parse()
 
-	configuration, configError := config.Validate(*mode, *configPath, *ids, *addresses, *protocolPorts, *serverPorts)
-	if configError != nil {
-		fmt.Println(fmt.Errorf("Error produced at parsing  configuration parameters \n%s", configError.Error()))
+	configuration, parsingError := config.Validate(*mode, *configPath, *ids, *addresses, *protocolPorts, *serverPorts)
+	if parsingError != nil {
+		fmt.Println(fmt.Errorf("Error produced at parsing  configuration parameters.\n%s", parsingError.Error()))
 		return
 	}
 	configurationError := config.AddProgramConfig(&configuration)
 	if configurationError != nil {
-		fmt.Printf("Using config: %v\n", configuration)
+		fmt.Println(fmt.Errorf("Bad configuration format.\n%s", configurationError.Error()))
+		return
 	}
 
-	//TODO
-
+	//TODO something with the configuration
 }
