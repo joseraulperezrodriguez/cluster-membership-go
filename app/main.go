@@ -37,5 +37,8 @@ func main() {
 		return
 	}
 
-	//TODO something with the configuration
+	//TODO open rest api ports
+
+	//TODO start protocol engine
+
 }
